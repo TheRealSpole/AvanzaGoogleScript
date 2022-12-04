@@ -143,7 +143,8 @@ function azPerf(id,ma,cacheTime){
  
   if(!id) return 'no id was set';
  
-  var azFund_url = 'https://www.avanza.se/_mobile/market/fund/{id}',
+ //azFund_url = 'https://www.avanza.se/_mobile/market/fund/{id}'
+  var azFund_url = 'https://www.avanza.se/_api/fund-guide/guide/{id}',
       azStock_url = 'https://www.avanza.se/_mobile/market/stock/{id}',
       check_url = 'https://www.avanza.se/_mobile/market/orderbooklist/{id}',
       response, data, rows = [], url;
@@ -182,9 +183,8 @@ function azPerf(id,ma,cacheTime){
  
   // check what the instrument type was and act accordingly
   if( type !== "FUND" ){ isFund = false;  }
-  isFund = false;
  
-  if( !isFund ){
+  /*if( !isFund )*/{ // Slår även upp fonder här nu för att få en vecka utveckling.
    
     url = azStock_url.replace('{id}', id);
    
@@ -214,20 +214,20 @@ function azPerf(id,ma,cacheTime){
     else {
       var currentNav = data.lastPrice;
     }
-    data.NAV = currentNav;
+    data.nav = currentNav;
    
    
     // add all changeSinceXXX
     data.changeSinceOneWeek = toPercent((currentNav/data.priceOneWeekAgo)-1);
-    data.changeSinceOneMonth = toPercent((currentNav/data.priceOneMonthAgo)-1);
-    data.changeSinceThreeMonths = toPercent((currentNav/data.priceThreeMonthsAgo)-1);
-    data.changeSinceSixMonths = toPercent((currentNav/data.priceSixMonthsAgo)-1);
-    data.changeSinceOneYear = toPercent((currentNav/data.priceOneYearAgo)-1);
-    data.changeSinceThreeYears = toPercent((currentNav/data.priceThreeYearsAgo)-1);
+    data.developmentOneMonth = toPercent((currentNav/data.priceOneMonthAgo)-1);
+    data.developmentThreeMonths = toPercent((currentNav/data.priceThreeMonthsAgo)-1);
+    data.developmentSixMonths = toPercent((currentNav/data.priceSixMonthsAgo)-1);
+    data.developmentOneYear = toPercent((currentNav/data.priceOneYearAgo)-1);
+    data.developmentThreeYears = toPercent((currentNav/data.priceThreeYearsAgo)-1);
    
     // add others
     data.sharpeRatio = '-';
-    data.NAVLastUpdated = data.lastPriceUpdated;
+    data.navDate = data.lastPriceUpdated;
     data.startDate = '-';
     data.standardDeviation = '-';
    
@@ -249,8 +249,8 @@ function azPerf(id,ma,cacheTime){
   }
  
   // it's a fund
-  else {
-   
+  if( isFund ) {
+    var changeSinceOneWeek = data.changeSinceOneWeek;
    
     // check if cached
     var cacheString = 'fund_' + id.toString() + ma;
@@ -268,13 +268,15 @@ function azPerf(id,ma,cacheTime){
     }
    
     data = JSON.parse(data);
+    data.type = data.fundTypeName;
+    data.changeSinceOneWeek = changeSinceOneWeek;
   }
  
   var lastUpdate;
-  lastUpdate = data.NAVLastUpdated.split('T')[0];
+  lastUpdate = data.navDate.split('T')[0];
  
   var nav = azPost(id, ma, true, "MONTH"),    
-      cur = data.NAV,
+      cur = data.nav,
       //cur = nav[0][0],
       sma = nav[0][1];
  
@@ -297,7 +299,7 @@ function azPerf(id,ma,cacheTime){
     }
   } // end loop
  
-  rows.push([data.name, data.type, diff, data.sharpeRatio, data.standardDeviation, data.changeSinceOneDay, data.changeSinceOneWeek,data.changeSinceOneMonth, data.changeSinceThreeMonths,data.changeSinceSixMonths,data.changeSinceOneYear,data.changeSinceThreeYears,data.changeSinceFiveYears,lastUpdate, data.NAV, sma]);
+  rows.push([data.name, data.type, diff, data.sharpeRatio, data.standardDeviation, data.developmentOneDay, data.changeSinceOneWeek,data.developmentOneMonth, data.developmentThreeMonths,data.developmentSixMonths,data.developmentOneYear,data.developmentThreeYears,data.developmentFiveYears, lastUpdate, data.nav, sma]);
   // Debug printout
   //rows.push([nav[0][0], nav[0][1], nav[0][2], diff]);
  
