@@ -147,6 +147,7 @@ function azPerf(id,ma,cacheTime){
   var azFund_url = 'https://www.avanza.se/_api/fund-guide/guide/{id}',
       azStock_url = 'https://www.avanza.se/_mobile/market/stock/{id}',
       check_url = 'https://www.avanza.se/_mobile/market/orderbooklist/{id}',
+      azIndex_url = 'https://www.avanza.se/_api/market-index/{id}',
       response, data, rows = [], url;
  
   // options for all requests
@@ -183,8 +184,42 @@ function azPerf(id,ma,cacheTime){
  
   // check what the instrument type was and act accordingly
   if( type !== "FUND" ){ isFund = false;  }
- 
-  /*if( !isFund )*/{ // Slår även upp fonder här nu för att få en vecka utveckling.
+
+  if( type === "INDEX") {
+    url = azIndex_url.replace('{id}', id);
+    // check if cached
+    var cacheString = 'index_' + id.toString() + ma;
+    var cache = CacheService.getScriptCache();
+    var cacheData = cache.get(cacheString);
+
+    if( cacheData ){
+      data = cacheData;
+    }
+    else {
+      response = UrlFetchApp.fetch(url, options);
+      data = response.getContentText();
+      cache.put(cacheString, data, cacheTime);
+    }
+
+    data = JSON.parse(data);
+
+    data.type = 'Index';
+    data.nav = data.quote.last;
+    data.navDate = toDateNum(data.quote.timeOfLast);
+
+    data.developmentOneWeek = toPercent((data.quote.last/data.historicalClosingPrices.oneWeek)-1);
+    data.developmentOneMonth = toPercent((data.quote.last/data.historicalClosingPrices.oneMonth)-1);
+    data.developmentThreeMonths = toPercent((data.quote.last/data.historicalClosingPrices.threeMonths)-1);
+    data.developmentSixMonths = '';
+    data.developmentOneYear = toPercent((data.quote.last/data.historicalClosingPrices.oneYear)-1);
+    data.developmentThreeYears = toPercent((data.quote.last/data.historicalClosingPrices.threeYears)-1);
+    data.developmentFiveYears = toPercent((data.quote.last/data.historicalClosingPrices.fiveYears)-1);
+
+    data.sharpeRatio = '-';
+    data.standardDeviation = '-';
+    data.startDate = data.historicalClosingPrices.startDate;
+
+  } else { // Slår även upp fonder här nu för att få en vecka utveckling.
    
     url = azStock_url.replace('{id}', id);
    
@@ -197,7 +232,6 @@ function azPerf(id,ma,cacheTime){
       data = cacheData;
     }
     else {
-      check_url = check_url.replace('{id}', id);
       response = UrlFetchApp.fetch(url, options);
       data = response.getContentText();
       cache.put(cacheString, data, cacheTime);
@@ -216,9 +250,8 @@ function azPerf(id,ma,cacheTime){
     }
     data.nav = currentNav;
    
-   
-    // add all changeSinceXXX
-    data.changeSinceOneWeek = toPercent((currentNav/data.priceOneWeekAgo)-1);
+    // add all developmentXXX
+    data.developmentOneWeek = toPercent((currentNav/data.priceOneWeekAgo)-1);
     data.developmentOneMonth = toPercent((currentNav/data.priceOneMonthAgo)-1);
     data.developmentThreeMonths = toPercent((currentNav/data.priceThreeMonthsAgo)-1);
     data.developmentSixMonths = toPercent((currentNav/data.priceSixMonthsAgo)-1);
@@ -239,9 +272,6 @@ function azPerf(id,ma,cacheTime){
     else if( type === 'CERTIFICATE'){
       data.type = 'Cert.';
     }
-    else if( type === 'INDEX'){
-      data.type = 'Index';
-    }
     else {
       data.type = 'Aktie';
     }
@@ -250,7 +280,7 @@ function azPerf(id,ma,cacheTime){
  
   // it's a fund
   if( isFund ) {
-    var changeSinceOneWeek = data.changeSinceOneWeek;
+    var developmentOneWeek = data.developmentOneWeek;
    
     // check if cached
     var cacheString = 'fund_' + id.toString() + ma;
@@ -269,7 +299,7 @@ function azPerf(id,ma,cacheTime){
    
     data = JSON.parse(data);
     data.type = data.fundTypeName;
-    data.changeSinceOneWeek = changeSinceOneWeek;
+    data.developmentOneWeek = developmentOneWeek;
   }
  
   var lastUpdate;
@@ -299,7 +329,7 @@ function azPerf(id,ma,cacheTime){
     }
   } // end loop
  
-  rows.push([data.name, data.type, diff, data.sharpeRatio, data.standardDeviation, data.developmentOneDay, data.changeSinceOneWeek,data.developmentOneMonth, data.developmentThreeMonths,data.developmentSixMonths,data.developmentOneYear,data.developmentThreeYears,data.developmentFiveYears, lastUpdate, data.nav, sma]);
+  rows.push([data.name, data.type, diff, data.sharpeRatio, data.standardDeviation, data.developmentOneDay, data.developmentOneWeek,data.developmentOneMonth, data.developmentThreeMonths,data.developmentSixMonths,data.developmentOneYear,data.developmentThreeYears,data.developmentFiveYears, lastUpdate, data.nav, sma]);
   // Debug printout
   //rows.push([nav[0][0], nav[0][1], nav[0][2], diff]);
  
@@ -625,4 +655,17 @@ function azPostMiniPrice(id, ma, single) {
   _rows = azPost(id, ma, false, single).slice(1);
   _returnsArray = _rows.map(e => e[1]);
   return [_returnsArray];
+}
+
+function toDateNum(string) {
+  //convert unix timestamp to milliseconds rather than seconds
+  var d = new Date(string);
+
+  //get timezone of spreadsheet
+  var tz = SpreadsheetApp.getActiveSpreadsheet().getSpreadsheetTimeZone();
+
+  //format date to readable format
+  var date = Utilities.formatDate(d, tz, 'yyyy-MM-dd'); // 'dd-MM-yyyy hh:mm:ss a'
+
+  return date;
 }
