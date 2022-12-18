@@ -145,7 +145,8 @@ function azPerf(id,ma,cacheTime){
  
  //azFund_url = 'https://www.avanza.se/_mobile/market/fund/{id}'
   var azFund_url = 'https://www.avanza.se/_api/fund-guide/guide/{id}',
-      azStock_url = 'https://www.avanza.se/_mobile/market/stock/{id}',
+      //azStock_url = 'https://www.avanza.se/_mobile/market/stock/{id}',
+      azStock_url = 'https://www.avanza.se/_api/market-guide/stock/{id}',
       check_url = 'https://www.avanza.se/_mobile/market/orderbooklist/{id}',
       azIndex_url = 'https://www.avanza.se/_api/market-index/{id}',
       response, data, rows = [], url;
@@ -207,6 +208,7 @@ function azPerf(id,ma,cacheTime){
     data.nav = data.quote.last;
     data.navDate = toDateNum(data.quote.timeOfLast);
 
+    data.developmentOneDay = toPercent((data.quote.last/data.historicalClosingPrices.oneDay)-1);
     data.developmentOneWeek = toPercent((data.quote.last/data.historicalClosingPrices.oneWeek)-1);
     data.developmentOneMonth = toPercent((data.quote.last/data.historicalClosingPrices.oneMonth)-1);
     data.developmentThreeMonths = toPercent((data.quote.last/data.historicalClosingPrices.threeMonths)-1);
@@ -238,39 +240,34 @@ function azPerf(id,ma,cacheTime){
     }
    
     data = JSON.parse(data);
-   
-    // not a fund, we must manually calculate returns
-    // and set this to data-object
-   
-    if( data.sellPrice ){
-      var currentNav = data.sellPrice; // .buyPrice also available (AZ uses sellPrice)
-    }
-    else {
-      var currentNav = data.lastPrice;
-    }
-    data.nav = currentNav;
+    data.nav = data.quote.last;
    
     // add all developmentXXX
-    data.developmentOneWeek = toPercent((currentNav/data.priceOneWeekAgo)-1);
-    data.developmentOneMonth = toPercent((currentNav/data.priceOneMonthAgo)-1);
-    data.developmentThreeMonths = toPercent((currentNav/data.priceThreeMonthsAgo)-1);
-    data.developmentSixMonths = toPercent((currentNav/data.priceSixMonthsAgo)-1);
-    data.developmentOneYear = toPercent((currentNav/data.priceOneYearAgo)-1);
-    data.developmentThreeYears = toPercent((currentNav/data.priceThreeYearsAgo)-1);
+    data.developmentOneDay = toPercent((data.quote.last/data.historicalClosingPrices.oneDay)-1);
+    data.developmentOneWeek = toPercent((data.quote.last/data.historicalClosingPrices.oneWeek)-1);
+    data.developmentOneMonth = toPercent((data.quote.last/data.historicalClosingPrices.oneMonth)-1);
+    data.developmentThreeMonths = toPercent((data.quote.last/data.historicalClosingPrices.threeMonths)-1);
+    data.developmentSixMonths = ''
+    data.developmentOneYear = toPercent((data.quote.last/data.historicalClosingPrices.oneYear)-1);
+    data.developmentThreeYears = toPercent((data.quote.last/data.historicalClosingPrices.threeYears)-1);
+    if(data.historicalClosingPrices.fiveYears)
+      data.developmentFiveYears = toPercent((data.quote.last/data.historicalClosingPrices.fiveYears)-1);
    
     // add others
     data.sharpeRatio = '-';
-    data.navDate = data.lastPriceUpdated;
-    data.startDate = '-';
+    data.navDate = toDateNum(data.quote.timeOfLast);
+    if(!data.startDate)
+      data.startDate = '-';
     data.standardDeviation = '-';
    
-    data.name = data.name + ' (' + data.tickerSymbol + ')';
+    if(data.tickerSymbol)
+      data.name = data.name + ' (' + data.tickerSymbol + ')';
    
     if( type.indexOf('TRADED_FUND') > -1 ){
       data.type = 'ETF';
     }
     else if( type === 'CERTIFICATE'){
-      data.type = 'Cert.';
+      data.type = 'Certifikat';
     }
     else {
       data.type = 'Aktie';
