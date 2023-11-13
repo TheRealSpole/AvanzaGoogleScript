@@ -147,6 +147,7 @@ function azPerf(id,ma,cacheTime){
   var azFund_url = 'https://www.avanza.se/_api/fund-guide/guide/{id}',
       //azStock_url = 'https://www.avanza.se/_mobile/market/stock/{id}',
       azStock_url = 'https://www.avanza.se/_api/market-guide/stock/{id}',
+      //azCertificate_url = 'https://www.avanza.se/_api/market-guide/certificate/{id}',
       check_url = 'https://www.avanza.se/_mobile/market/orderbooklist/{id}',
       azIndex_url = 'https://www.avanza.se/_api/market-index/{id}',
       response, data, rows = [], url;
@@ -213,9 +214,17 @@ function azPerf(id,ma,cacheTime){
     data.developmentOneMonth = toPercent((data.quote.last/data.historicalClosingPrices.oneMonth)-1);
     data.developmentThreeMonths = toPercent((data.quote.last/data.historicalClosingPrices.threeMonths)-1);
     data.developmentSixMonths = '';
+    data.developmentStartOfYear = toPercent((data.quote.last/data.historicalClosingPrices.startOfYear)-1);
     data.developmentOneYear = toPercent((data.quote.last/data.historicalClosingPrices.oneYear)-1);
-    data.developmentThreeYears = toPercent((data.quote.last/data.historicalClosingPrices.threeYears)-1);
-    data.developmentFiveYears = toPercent((data.quote.last/data.historicalClosingPrices.fiveYears)-1);
+    data.developmentThreeYears = ''
+    if(data.historicalClosingPrices.threeYears)
+      data.developmentThreeYears = toPercent((data.quote.last/data.historicalClosingPrices.threeYears)-1);
+    data.developmentFiveYears = ''
+    if(data.historicalClosingPrices.fiveYears)
+      data.developmentFiveYears = toPercent((data.quote.last/data.historicalClosingPrices.fiveYears)-1);
+    data.developmentTenYears = ''
+    if(data.historicalClosingPrices.tenYears)
+      data.developmentTenYears = toPercent((data.quote.last/data.historicalClosingPrices.tenYears)-1);
 
     data.sharpeRatio = '-';
     data.standardDeviation = '-';
@@ -248,10 +257,17 @@ function azPerf(id,ma,cacheTime){
     data.developmentOneMonth = toPercent((data.quote.last/data.historicalClosingPrices.oneMonth)-1);
     data.developmentThreeMonths = toPercent((data.quote.last/data.historicalClosingPrices.threeMonths)-1);
     data.developmentSixMonths = ''
+    data.developmentStartOfYear = toPercent((data.quote.last/data.historicalClosingPrices.startOfYear)-1);
     data.developmentOneYear = toPercent((data.quote.last/data.historicalClosingPrices.oneYear)-1);
-    data.developmentThreeYears = toPercent((data.quote.last/data.historicalClosingPrices.threeYears)-1);
+    data.developmentThreeYears = ''
+    if(data.historicalClosingPrices.threeYears)
+      data.developmentThreeYears = toPercent((data.quote.last/data.historicalClosingPrices.threeYears)-1);
+    data.developmentFiveYears = ''
     if(data.historicalClosingPrices.fiveYears)
       data.developmentFiveYears = toPercent((data.quote.last/data.historicalClosingPrices.fiveYears)-1);
+    data.developmentTenYears = ''
+    if(data.historicalClosingPrices.tenYears)
+      data.developmentTenYears = toPercent((data.quote.last/data.historicalClosingPrices.tenYears)-1);
    
     // add others
     data.sharpeRatio = '-';
@@ -272,31 +288,30 @@ function azPerf(id,ma,cacheTime){
     else {
       data.type = 'Aktie';
     }
-   
   }
  
   // it's a fund
   if( isFund ) {
-    var developmentOneWeek = data.developmentOneWeek;
-   
     // check if cached
     var cacheString = 'fund_' + id.toString() + ma;
     var cache = CacheService.getScriptCache();
     var cacheData = cache.get(cacheString);
    
     if( cacheData ){
-      data = cacheData;
+      datafund = cacheData;
     }
     else {
       url = azFund_url.replace('{id}',id);
       response = UrlFetchApp.fetch(url, options);
-      data = response.getContentText();
+      datafund = response.getContentText();
       cache.put(cacheString, data, cacheTime);
     }
    
-    data = JSON.parse(data);
-    data.type = data.fundTypeName;
-    data.developmentOneWeek = developmentOneWeek;
+    datafund = JSON.parse(datafund);
+    data.type = datafund.fundTypeName;
+    data.developmentSixMonths = datafund.developmentSixMonths;
+    data.sharpeRatio = datafund.sharpeRatio;
+    data.standardDeviation = datafund.standardDeviation;
   }
  
   var lastUpdate;
@@ -326,7 +341,7 @@ function azPerf(id,ma,cacheTime){
     }
   } // end loop
  
-  rows.push([data.name, data.type, diff, data.sharpeRatio, data.standardDeviation, data.developmentOneDay, data.developmentOneWeek,data.developmentOneMonth, data.developmentThreeMonths,data.developmentSixMonths,data.developmentOneYear,data.developmentThreeYears,data.developmentFiveYears, lastUpdate, data.nav, sma]);
+  rows.push([data.name, /*data.type, */diff, data.sharpeRatio, data.standardDeviation, data.developmentOneDay, data.developmentOneWeek,data.developmentOneMonth, data.developmentThreeMonths,data.developmentSixMonths, data.developmentStartOfYear,data.developmentOneYear,data.developmentThreeYears,data.developmentFiveYears,data.developmentTenYears, lastUpdate/*, data.nav, sma*/]);
   // Debug printout
   //rows.push([nav[0][0], nav[0][1], nav[0][2], diff]);
  
